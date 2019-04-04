@@ -1,0 +1,135 @@
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Windows.Forms;
+
+namespace BatBrawser
+{
+    public partial class Form1 : Form
+    {
+        public Form1()
+        {
+            InitializeComponent();
+        }
+
+        List<WebBrowser> webTa = new List<WebBrowser>();
+
+        private void button1_Click(object sender, EventArgs e)
+        {
+            if (webTa[tabControl1.SelectedIndex].CanGoBack)
+                webTa[tabControl1.SelectedIndex].GoBack();              
+        }
+
+        private void button2_Click(object sender, EventArgs e)
+        {
+            if (webTa[tabControl1.SelectedIndex].CanGoForward)
+                webTa[tabControl1.SelectedIndex].GoForward();
+        }
+
+        private void button3_Click(object sender, EventArgs e)
+        {
+            webTa[tabControl1.SelectedIndex].Refresh();
+        }
+
+        private void button4_Click(object sender, EventArgs e)
+        {
+            webTa[tabControl1.SelectedIndex].Stop();
+        }
+
+        private void textBox1_KeyPress(object sender, KeyPressEventArgs e)
+        {
+            if (e.KeyChar == (char)13 && textBox1.Text!="")
+            {
+                progressBar1.Show();
+                webTa[tabControl1.SelectedIndex].ScriptErrorsSuppressed = true;
+                if (!textBox1.Text.Contains(" ") && !textBox1.Text.StartsWith(".") && textBox1.Text.Contains("."))
+                    webTa[tabControl1.SelectedIndex].Navigate(textBox1.Text.Trim());
+                else
+                {
+                    textBox1.Text = textBox1.Text.Replace(" ", "+");
+                    textBox1.Text = "google.com/search?q=" + textBox1.Text;
+                    webTa[tabControl1.SelectedIndex].Navigate(textBox1.Text.Trim());
+                }
+                webTa[tabControl1.SelectedIndex].DocumentCompleted += new WebBrowserDocumentCompletedEventHandler(Form1_DocumentCompleted);                
+            }        
+        }
+
+        void Form1_DocumentCompleted(object sender, WebBrowserDocumentCompletedEventArgs e)
+        {
+            if (webTa[tabControl1.SelectedIndex].ReadyState == WebBrowserReadyState.Complete)
+            {
+                progressBar1.Value = 100;
+                progressBar1.Hide();
+                progressBar1.Value = 0;
+            }
+            else
+            {
+                if(progressBar1.Value<90)
+                    progressBar1.Value+=10;
+            }
+            textBox1.Text = webTa[tabControl1.SelectedIndex].Url.ToString();
+            tabControl1.SelectedTab.Text = webTa[tabControl1.SelectedIndex].DocumentTitle;
+        }
+
+        private void webTa_ProgressChanged(object sender, WebBrowserProgressChangedEventArgs e)
+        {
+            try 
+            {
+                if (progressBar1.Value != progressBar1.Maximum)
+                    progressBar1.Show();
+                progressBar1.Value = Convert.ToInt32(e.CurrentProgress);
+                progressBar1.Maximum = Convert.ToInt32(e.MaximumProgress);
+                if (progressBar1.Value == progressBar1.Maximum)
+                {
+                    textBox1.Text = webTa[tabControl1.SelectedIndex].Url.ToString();
+                    progressBar1.Hide();
+                }
+            }
+            catch (Exception ex)
+            {
+                //MessageBox.Show(ex.Message);
+            }
+        }
+
+        private void button5_Click(object sender, EventArgs e)
+        {
+            textBox1.Text = "";
+            TabPage tab = new TabPage();
+            tab.Text = "New Tab";
+            tabControl1.Controls.Add(tab);
+            tabControl1.SelectTab(tabControl1.TabCount - 1);
+            webTa.Add(new WebBrowser() { ScriptErrorsSuppressed = true });
+            webTa[tabControl1.SelectedIndex].Parent = tab;
+            webTa[tabControl1.SelectedIndex].Dock = DockStyle.Fill;
+            webTa[tabControl1.SelectedIndex].DocumentCompleted +=new WebBrowserDocumentCompletedEventHandler(Form1_DocumentCompleted);
+            textBox1.Focus();
+        }
+
+        private void Form1_Load(object sender, EventArgs e)
+        {
+            webTa.Add(new WebBrowser() { ScriptErrorsSuppressed = true });
+            webTa[0].Parent = tabPage1;
+            webTa[0].Dock = DockStyle.Fill;
+            webTa[0].DocumentCompleted +=new WebBrowserDocumentCompletedEventHandler(Form1_DocumentCompleted);
+            progressBar1.Hide();
+            progressBar1.Value = 0;
+            progressBar1.Maximum = 100;
+        }
+
+        private void button6_Click(object sender, EventArgs e)
+        {
+            if (tabControl1.TabCount == 1)
+                System.Windows.Forms.Application.Exit();
+            else
+            {
+                webTa[tabControl1.SelectedIndex].Dispose();
+                webTa.Remove(webTa[tabControl1.SelectedIndex]);
+                tabControl1.TabPages.Remove(tabControl1.SelectedTab);
+            }
+        }
+    }
+}
